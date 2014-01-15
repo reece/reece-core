@@ -1,0 +1,11 @@
+syntax: glob
+
+*.bak
+*.egg-info
+*.orig
+*.pyc
+*.pyo
+*.sqlite3
+*~
+tmp
+distribute-*
