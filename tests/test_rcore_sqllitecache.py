@@ -1,16 +1,18 @@
 import atexit
+import collections
 import tempfile
 import unittest
 
 import rcore.sqlitecache
 
-test_values = [
-    ('key1', 'text', None),
-    ('key2', 2, None),
-    (3, 'val4', None),
-    (5, 6, None),
-    (7, None, None),
-    (None, 8, None),
+
+tests = [
+    ('str_str',  'key1', 'text'),
+    ('str_int',  'key2',      2),
+    ('int_str',      3,  'val4'),
+    ('int_int',      5,       6),
+    ('int_None',     7,    None),
+    ('None_int',  None,       8),
     ]
 
 
@@ -25,9 +27,12 @@ class Test_SQLiteCache(unittest.TestCase):
 
         self.cache = rcore.sqlitecache.SQLiteCache(self._fn)
 
-    def test_tvs(self):
-        for tv in test_values:
-            self.assertEqual( self.cache[tv[0]], tv[1] )
+        for n,k,v in tests:
+            self.cache[k] = v
+
+    def test(self):
+        for n,k,v in tests:
+            self.assertEqual(v, self.cache[k])
 
 if __name__ == '__main__':
     unittest.main()
