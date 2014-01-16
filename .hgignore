@@ -10,3 +10,5 @@ syntax: glob
 tmp
 distribute-*
 nosetests.xml
+dist
+build

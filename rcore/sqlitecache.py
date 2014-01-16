@@ -46,7 +46,10 @@ class SQLiteCache(object):
     def __getitem__(self,key):
         self._logger.debug('__getitem__({key})'.format(key=key))
         cur = self._execute('SELECT value,value_compressed FROM cache WHERE key = ?',[key_to(key)])
-        return val_from(*cur.fetchone())
+        row = cur.fetchone()
+        if row is None:
+            raise KeyError(key)
+        return val_from(*row)
 
     def __setitem__(self,key,value):
         db_val = val_to(value,self.compress_values)
@@ -56,7 +59,9 @@ class SQLiteCache(object):
 
     def __delitem__(self,key):
         self._logger.debug('__delitem__({key})'.format(key=key))
-        self._execute('DELETE FROM cache WHERE key = ?',[key_to(key)])
+        cur = self._execute('DELETE FROM cache WHERE key = ?',[key_to(key)])
+        if cur.rowcount == 0:
+            raise KeyError(key)
 
     def __contains__(self,key):
         self._logger.debug('__contains__({key})'.format(key=key))

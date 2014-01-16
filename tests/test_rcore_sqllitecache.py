@@ -1,38 +1,89 @@
 import atexit
 import collections
+import os
 import tempfile
+import time
 import unittest
 
 import rcore.sqlitecache
 
 
-tests = [
-    ('str_str',  'key1', 'text'),
-    ('str_int',  'key2',      2),
-    ('int_str',      3,  'val4'),
-    ('int_int',      5,       6),
-    ('int_None',     7,    None),
-    ('None_int',  None,       8),
-    ]
-
-
-class Test_SQLiteCache(unittest.TestCase):
+class Test_SQLiteCacheBase(unittest.TestCase):
 
     def setUp(self):
-        if True:
-            self._fn = '/tmp/test.db'
-        else:
-            self._fn = tempfile.mkstemp(suffix='.db')
-            atexit.register(lambda: os.remove(self._fn))
+        _,self._fn = tempfile.mkstemp(suffix='.db')
+        
+        atexit.register(lambda: os.remove(self._fn))
 
         self.cache = rcore.sqlitecache.SQLiteCache(self._fn)
 
-        for n,k,v in tests:
-            self.cache[k] = v
 
-    def test(self):
-        for n,k,v in tests:
-            self.assertEqual(v, self.cache[k])
+
+class Test_SQLiteCache_AttrLookup(Test_SQLiteCacheBase):
+
+    def test_str_str(self):
+        k,v = 'key1','text'
+        self.cache[k] = v
+        self.assertEqual(v, self.cache[k])
+    
+    def test_str_int(self):
+        k,v = 'key2',2
+        self.cache[k] = v
+        self.assertEqual(v, self.cache[k])
+    
+    def test_int_str(self):
+        k,v = 3,'val4'
+        self.cache[k] = v
+        self.assertEqual(v, self.cache[k])
+    
+    def test_int_int(self):
+        k,v = 5,6
+        self.cache[k] = v
+        self.assertEqual(v, self.cache[k])
+    
+    def test_int_None(self):
+        k,v = 7,None
+        self.cache[k] = v
+        self.assertEqual(v, self.cache[k])
+    
+    def test_None_int(self):
+        k,v = None,8
+        self.cache[k] = v
+        self.assertEqual(v, self.cache[k])
+
+
+class Test_SQLiteCache_Dir(Test_SQLiteCacheBase):
+
+    def setUp(self):
+        super(Test_SQLiteCache_Dir,self).setUp()
+        self.cache['a'] = 'a'
+        self.cache['b'] = 'b'
+        self.cache['b'] = 'b2'
+        self.cache['c'] = 'c'
+
+    def test_dir(self):
+        self.assertEqual( set(['a','b','c']), set(dir(self.cache)) )
+        
+    def test_in(self):
+        self.assertTrue('a' in self.cache)
+        self.assertTrue('b' in self.cache)
+        self.assertTrue('c' in self.cache)
+        
+
+class Test_SQLiteCache_Expire(Test_SQLiteCacheBase):
+    
+    def test_expire(self):
+        self.cache['a'] = 'a'
+        self.cache['b'] = 'b'
+        time.sleep(5)
+        self.cache['b'] = 'b2'
+        self.cache['c'] = 'c'
+        
+        self.assertEqual( set(['a','b','c']), set(dir(self.cache)) )
+        self.cache.expire(3)
+        # b was updated and should be younger than 3 seconds old
+        self.assertEqual( set(['b','c']), set(dir(self.cache)) )
+        
 
 if __name__ == '__main__':
     unittest.main()
