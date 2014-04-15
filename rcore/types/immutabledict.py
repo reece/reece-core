@@ -6,15 +6,18 @@ class ImmutableDict(dict):
     >>> from rcore.types.immutabledict import ImmutableDict
 
     # initialization as with standard dicts:
-    >>> d = ImmutableDict(a=1,b=2)
-    >>> d
+    >>> ImmutableDict(a=1,b=2)
     ImmutableDict({'a': 1, 'b': 2})
 
-    >>> d = ImmutableDict({'a':1,'b':2})
-    >>> d
+    >>> ImmutableDict({'a':1,'b':2})
     ImmutableDict({'a': 1, 'b': 2})
+
+    >>> ImmutableDict( (chr(65+i),i) for i in xrange(5) )
+    ImmutableDict({'A': 0, 'C': 2, 'B': 1, 'E': 4, 'D': 3})
+
 
     # setting values as with dicts:
+    >>> d = ImmutableDict(a=1,b=2)
     >>> d['c'] = 3
     >>> d
     ImmutableDict({'a': 1, 'c': 3, 'b': 2})
@@ -23,19 +26,23 @@ class ImmutableDict(dict):
     >>> d
     ImmutableDict({'a': 1, 'c': 3, 'b': 2, 'd': 4})
 
+
     # setting a value to the same value is permitted
     >>> d['c'] = 3
+    >>> d.update(c=3)
+
 
     # resetting values via assignment and update are prohibited
-    >>> d['a'] = 3
+    >>> d['c'] = 4
     Traceback (most recent call last):
     ...
-    KeyError: 'key "a" already in immutable dictionary'
+    KeyError: 'key "c" already in immutable dictionary'
 
-    >>> d.update({'a': 4})
+    >>> d.update({'c': 4})
     Traceback (most recent call last):
     ...
-    KeyError: 'key "a" already in immutable dictionary'
+    KeyError: 'key "c" already in immutable dictionary'
+    
     """
     
     def __init__(self, *args, **kwargs):
@@ -51,11 +58,17 @@ class ImmutableDict(dict):
         return '%s(%s)' % (type(self).__name__, dictrepr)
 
     def update(self, *args, **kwargs):
-        for iterable in args:
-            for k, v in iterable.iteritems():
-                self[k] = v 
-        for k, v in kwargs.iteritems():
-            self[k] = v
+        if args:
+            iterable = args[0]
+            if hasattr(iterable,'iteritems'):
+                for k, v in iterable.iteritems():
+                    self[k] = v 
+            else:
+                for k, v in iterable:
+                    self[k] = v 
+        else:
+            for k, v in kwargs.iteritems():
+                self[k] = v
 
 
 if __name__ == '__main__':
