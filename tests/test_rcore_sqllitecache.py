@@ -5,7 +5,7 @@ import tempfile
 import time
 import unittest
 
-import rcore.sqlitecache
+import rcore.caches.sqlitecache
 
 
 class Test_SQLiteCacheBase(unittest.TestCase):
@@ -15,7 +15,7 @@ class Test_SQLiteCacheBase(unittest.TestCase):
         
         atexit.register(lambda: os.remove(self._fn))
 
-        self.cache = rcore.sqlitecache.SQLiteCache(self._fn)
+        self.cache = rcore.caches.sqlitecache.SQLiteCache(self._fn)
 
 
 

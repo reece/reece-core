@@ -57,7 +57,7 @@ test-setup: develop
 
 #=> test, test-with-coverage -- per-commit test target for CI
 test test-with-coverage: test-setup
-	python setup.py nosetests --with-xunit --with-coverage --cover-erase --cover-package=hgvs --cover-html 
+	python setup.py nosetests
 
 #=> ci-test-nightly -- per-commit test target for CI
 ci-test jenkins:
@@ -107,7 +107,7 @@ cleaner: clean
 #=> cleanest: above, and remove the virtualenv, .orig, and .bak files
 cleanest: cleaner
 	find . \( -name \*.orig -o -name \*.bak \) -print0 | xargs -0r /bin/rm -v
-	/bin/rm -fr distribute-* *.egg *.egg-info *.tar.gz nosetests.xml
+	/bin/rm -fr distribute-* *.egg *.egg-info *.tar.gz nosetests.xml .coverage cover
 #=> pristine: above, and delete anything unknown to mercurial
 pristine: cleanest
 	hg st -un0 | xargs -0r echo /bin/rm -fv

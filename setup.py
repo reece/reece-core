@@ -5,7 +5,14 @@ use_setuptools()
 
 from setuptools import setup, find_packages
 
+def version_handler(mgr, options):
+    version = mgr.get_current_version()
+    if version.endswith('dev'):
+        version += '-' + mgr._invoke(['id','-i'])
+    return version
+
 setup(
+    #use_hg_version = True,
     author = 'Reece Hart',
     author_email = 'reecehart+rcore@gmail.com',
     description = "Reece's commonly used utilities",
@@ -13,8 +20,9 @@ setup(
     long_description = open('README.rst','r').read(),
     name = "rcore",
     packages = ['rcore'],
+    test_suite = 'nose.collector',
     url = 'https://bitbucket.org/reece/rcore',
-    use_hg_version = True,
+    use_vcs_version = {'version_handler': version_handler},
     zip_safe = True,
 
     classifiers = [
@@ -25,7 +33,6 @@ setup(
         ],
 
     install_requires = [
-        # rcore needs only Python >=2.7
         ],
 
     setup_requires = [

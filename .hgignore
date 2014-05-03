@@ -7,8 +7,11 @@ syntax: glob
 *.pyo
 *.sqlite3
 *~
-tmp
+.coverage
+archive
+build
+cover
+dist
 distribute-*
 nosetests.xml
-dist
-build
+tmp
