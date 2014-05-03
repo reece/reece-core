@@ -6,7 +6,6 @@ use_setuptools()
 from setuptools import setup, find_packages
 
 def version_handler(mgr, options):
-    import IPython; IPython.embed()
     version = mgr.get_current_version()
     if version.endswith('dev'):
         version += '-' + mgr._invoke('log','-l1','-r.','--template','{node|short}').strip()
