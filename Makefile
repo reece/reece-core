@@ -1,9 +1,8 @@
-# Python project Makefile
+# Makefile for Python project
 
-.SUFFIXES :
-.PRECIOUS :
-.PHONY : FORCE
 .DELETE_ON_ERROR:
+.PHONY: FORCE
+.SUFFIXES :
 
 SHELL:=/bin/bash -o pipefail
 SELF:=$(firstword $(MAKEFILE_LIST))
@@ -13,107 +12,82 @@ SELF:=$(firstword $(MAKEFILE_LIST))
 default: help
 
 #=> help -- display this help message
-help: config
-	@sbin/extract-makefile-documentation "${SELF}"
-
-config:
-	@echo CONFIGURATION
-	@echo "  UTA_DB_URL=${UTA_DB_URL}"
+help:
+	@sbin/makefile-extract-documentation "${SELF}"
 
 
 ############################################################################
 #= SETUP, INSTALLATION, PACKAGING
 
-# => setup
-setup: requirements.txt #build
-	pip install -r $<
-
-#=> docs -- make sphinx docs
-docs: setup build_sphinx
-
-#=> build_sphinx
-# sphinx docs needs to be able to import packages
-build_sphinx: develop
-
-#=> upload
-upload:
-	python setup.py bdist_egg sdist upload
-
-#=> upload to pypi and invitae (internal) pypi
-# This requires an invitae config stanza in ~/.pypirc
-upload2:
-	python setup.py bdist_egg sdist upload upload -r invitae
-
-#=> develop, build_sphinx, sdist, upload_sphinx
-bdist bdist_egg build build_sphinx develop install sdist upload_sphinx upload_docs: %:
+#=> develop: install package in develop mode
+.PHONY: develop
+develop: %:
+	[ -f requirements.txt ] && pip install --upgrade -r requirements.txt || true
 	python setup.py $*
 
+#=> install: install package
+#=> bdist bdist_egg bdist_wheel build build_sphinx install sdist
+.PHONY: bdist bdist_egg bdist_wheel build build_sphinx install sdist
+bdist bdist_egg bdist_wheel build build_sphinx install sdist: %:
+	python setup.py $@
+
+#=> upload: upload to pypi
+#=> upload_*: upload to named pypi service (requires config in ~/.pypirc)
+.PHONY: upload upload_%
+upload: upload_pypi
+upload_%:
+	python setup.py bdist_egg bdist_wheel sdist upload -r $*
 
 ############################################################################
 #= TESTING
 
-#=> test -- run tests
-test-setup: develop
+#=> test: execute tests
+.PHONY: test
+test:
+	py.test tests
 
-#=> test, test-with-coverage -- per-commit test target for CI
-test test-with-coverage: test-setup
-	python setup.py nosetests
-
-#=> ci-test-nightly -- per-commit test target for CI
-ci-test jenkins:
-	make ve \
-	&& source ve/bin/activate \
-	&& make install \
-	&& make test
+#=> tox: execute tests via tox
+.PHONY: tox
+tox:
+	tox
 
 
 ############################################################################
 #= UTILITY TARGETS
+# N.B. Although code is stored in github, I use hg and hg-git on the command line
+#=> reformat: reformat code with yapf and commit
+.PHONY: reformat
+reformat:
+	@if hg sum | grep -qL '^commit:.*modified'; then echo "Repository not clean" 1>&2; exit 1; fi
+	@if hg sum | grep -qL ' applied'; then echo "Repository has applied patches" 1>&2; exit 1; fi
+	yapf -i -r seqrepo tests
+	hg commit -m "reformatted with yapf"
 
-#=> lint -- run lint, flake, etc
-# TBD
+#=> docs -- make sphinx docs
+.PHONY: doc docs
+doc docs: develop
+	# RTD makes json. Build here to ensure that it works.
+	make -C doc html json
 
-#=> docs-aux -- make generated docs for sphinx
-docs-aux:
-	make -C misc/railroad doc-install
-	make -C examples doc-install
-
-#=> ve -- create a *local* virtualenv (not typically needed)
-VE_DIR:=ve
-VE_MAJOR:=1
-VE_MINOR:=10
-VE_PY_DIR:=virtualenv-${VE_MAJOR}.${VE_MINOR}
-VE_PY:=${VE_PY_DIR}/virtualenv.py
-${VE_PY}:
-	curl -sO  https://pypi.python.org/packages/source/v/virtualenv/virtualenv-${VE_MAJOR}.${VE_MINOR}.tar.gz
-	tar -xvzf virtualenv-${VE_MAJOR}.${VE_MINOR}.tar.gz
-	rm -f virtualenv-${VE_MAJOR}.${VE_MINOR}.tar.gz
-${VE_DIR}: ${VE_PY} 
-	${SYSTEM_PYTHON} $< ${VE_DIR} 2>&1 | tee "$@.err"
-	/bin/mv "$@.err" "$@"
-
-
-############################################################################
-#= CLEANUP
-.PHONY: clean cleaner cleanest pristine
-#=> clean: clean up editor backups, etc.
+#=> clean: remove temporary and backup files
+.PHONY: clean
 clean:
-	find . -name \*~ -print0 | xargs -0r /bin/rm
-#=> cleaner: above, and remove generated files
+	find . \( -name \*~ -o -name \*.bak \) -print0 | xargs -0r rm
+
+#=> cleaner: remove files and directories that are easily rebuilt
+.PHONY: cleaner
 cleaner: clean
-	find . -name \*.pyc -print0 | xargs -0r /bin/rm -f
-	/bin/rm -fr build bdist dist sdist ve virtualenv*
-	-make -C doc clean
-#=> cleanest: above, and remove the virtualenv, .orig, and .bak files
-cleanest: cleaner
-	find . \( -name \*.orig -o -name \*.bak \) -print0 | xargs -0r /bin/rm -v
-	/bin/rm -fr distribute-* *.egg *.egg-info *.tar.gz nosetests.xml .coverage cover
-#=> pristine: above, and delete anything unknown to mercurial
-pristine: cleanest
-	hg st -un0 | xargs -0r echo /bin/rm -fv
+	rm -fr *.egg-info build dist
+	find . \( -name \*.pyc -o -name \*.orig \) -print0 | xargs -0r rm
+	find . -name __pycache__ -print0 | xargs -0r rm -fr
+
+#=> cleaner: remove files and directories that require more time/network fetches to rebuild
+.PHONY: cleanest distclean
+cleanest distclean: cleaner
+	rm -fr .eggs .tox
 
 ## <LICENSE>
-## Copyright 2014 HGVS Contributors (https://bitbucket.org/invitae/hgvs)
+## Copyright 2016 Source Code Committers
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
